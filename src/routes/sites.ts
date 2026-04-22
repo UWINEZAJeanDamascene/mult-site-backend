@@ -195,7 +195,7 @@ router.get('/:id/details', authenticateToken, requireMainStockManager, async (re
       site_id: siteId,
       company_id,
       date: { $gte: startOfMonth, $lte: endOfMonth },
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).populate('recordedBy', 'name');
 
     // Get pending price count from main stock
     const pendingPriceCount = await MainStockRecord.countDocuments({
@@ -218,7 +218,20 @@ router.get('/:id/details', authenticateToken, requireMainStockManager, async (re
         description: site.description,
         isActive: site.isActive,
       },
-      records,
+      records: records.map(r => ({
+        _id: r._id.toString(),
+        materialName: r.materialName,
+        quantityReceived: r.quantityReceived,
+        quantityUsed: r.quantityUsed,
+        date: r.date,
+        notes: r.notes,
+        syncedToMainStock: r.syncedToMainStock,
+        mainStockEntryId: r.mainStockEntryId?.toString(),
+        recordedBy: (r.recordedBy as any)?._id?.toString() || r.recordedBy?.toString(),
+        recordedByName: (r.recordedBy as any)?.name,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      })),
       stats: {
         recordsThisMonth: records.length,
         pendingPriceCount,
