@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SITE_MANAGER
+  MAIN_STOCK_MANAGER
+}
+
+enum RecordStatus {
+  ACTIVE
+  ADJUSTED
+  ARCHIVED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        UserRole
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Site managers can be assigned to multiple sites
+  assignedSites SiteAssignment[]
+
+  // Records created by this user
+  siteRecords SiteRecord[]
+  mainStockRecords MainStockRecord[]
+
+  // Sites created by main stock manager
+  createdSites Site[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Site {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Who created this site (main stock manager)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  // Site assignments
+  assignments SiteAssignment[]
+
+  // Records from this site
+  siteRecords SiteRecord[]
+
+  // Linked main stock records
+  mainStockRecords MainStockRecord[]
+
+  @@index([createdById])
+}
+
+model SiteAssignment {
+  id     String @id @default(uuid())
+  userId String
+  siteId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@unique([userId, siteId])
+  @@index([userId])
+  @@index([siteId])
+}
+
+// Records created by site managers (no price field)
+model SiteRecord {
+  id            String   @id @default(uuid())
+
+  // Material info
+  materialName  String
+  quantityReceived Float @default(0)
+  quantityUsed  Float   @default(0)
+  date          DateTime
+  notes         String?
+
+  // Relations
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+
+  // Auto-sync tracking
+  syncedToMainId String? @unique
+  mainStockRecord MainStockRecord? @relation("SiteToMain", fields: [syncedToMainId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([createdById])
+  @@index([materialName])
+  @@index([date])
+}
+
+// Main stock records (with price and full fields)
+model MainStockRecord {
+  id            String   @id @default(uuid())
+
+  // Material info
+  material      String
+  siteSource    String   // Site name or "direct"
+
+  quantityReceived Float @default(0)
+  quantityUsed  Float    @default(0)
+  price         Float?   // Price per unit (can be added later for site records)
+  totalValue    Float?   // Computed: quantityUsed * price (for used) or (received-used) * price
+
+  date          DateTime
+  status        RecordStatus @default(ACTIVE)
+  notes         String?
+
+  // Source tracking
+  isDirectEntry Boolean  @default(false)  // True if created directly by main stock manager
+  sourceRecordId String? @unique
+  sourceRecord  SiteRecord? @relation("SiteToMain")
+
+  // Who created/modified this
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+
+  // Site link (null for direct entries)
+  siteId        String?
+  site          Site?    @relation(fields: [siteId], references: [id])
+
+  // Derived views linkage
+  usedMaterialEntry UsedMaterialView?
+  remainingMaterialEntry RemainingMaterialView?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([material])
+  @@index([siteSource])
+  @@index([siteId])
+  @@index([date])
+  @@index([status])
+  @@index([isDirectEntry])
+}
+
+// Aggregated view of used materials (auto-computed)
+model UsedMaterialView {
+  id              String   @id @default(uuid())
+
+  material        String
+  totalQuantityUsed Float
+  avgPrice        Float?   // Weighted average price
+  totalValue      Float?   // Sum of all values
+
+  // Last updated from which main stock record
+  lastRecordId    String   @unique
+  lastRecord      MainStockRecord @relation(fields: [lastRecordId], references: [id], onDelete: Cascade)
+
+  // Aggregation metadata
+  recordCount     Int      @default(0)
+  siteBreakdown   Json?    // { siteName: quantity }
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([material])
+}
+
+// Remaining materials balance view (auto-computed)
+model RemainingMaterialView {
+  id              String   @id @default(uuid())
+
+  material        String
+  totalReceived   Float
+  totalUsed       Float
+  remainingQuantity Float
+
+  avgPrice        Float?   // For valuation
+  remainingValue  Float?   // remainingQuantity * avgPrice
+
+  // Last updated from which main stock record
+  lastRecordId    String   @unique
+  lastRecord      MainStockRecord @relation(fields: [lastRecordId], references: [id], onDelete: Cascade)
+
+  // Source breakdown
+  siteBreakdown   Json?    // { siteName: { received, used, remaining } }
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([material])
+}
+
+// Audit log for all stock movements (for traceability)
+model StockMovementLog {
+  id              String   @id @default(uuid())
+
+  action          String   // CREATE, UPDATE, DELETE, SYNC, ADJUST
+  entityType      String   // SiteRecord, MainStockRecord, etc.
+  entityId        String
+
+  // Snapshot of data at time of change
+  beforeState     Json?
+  afterState      Json?
+
+  // Who made the change
+  performedById   String
+  performedByName String
+
+  // Context
+  siteId          String?
+  timestamp       DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([performedById])
+}

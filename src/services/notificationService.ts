@@ -1,0 +1,112 @@
+import { createNotification, NotificationType, NotificationPriority } from '../models/Notification';
+
+export class NotificationService {
+  // Create notification for material received
+  static async notifyMaterialReceived(
+    userId: string,
+    materialName: string,
+    quantity: number,
+    siteName?: string
+  ) {
+    return createNotification({
+      userId,
+      type: NotificationType.MATERIAL_RECEIVED,
+      title: 'Material Received',
+      message: `${materialName} - ${quantity} units received${siteName ? ` at ${siteName}` : ''}`,
+      priority: NotificationPriority.MEDIUM,
+      data: { materialName, quantity, siteName },
+    });
+  }
+
+  // Create notification for material used
+  static async notifyMaterialUsed(
+    userId: string,
+    materialName: string,
+    quantity: number,
+    siteName?: string
+  ) {
+    return createNotification({
+      userId,
+      type: NotificationType.MATERIAL_USED,
+      title: 'Material Used',
+      message: `${materialName} - ${quantity} units used${siteName ? ` at ${siteName}` : ''}`,
+      priority: NotificationPriority.MEDIUM,
+      data: { materialName, quantity, siteName },
+    });
+  }
+
+  // Create notification for low stock
+  static async notifyLowStock(
+    userId: string,
+    materialName: string,
+    remainingQuantity: number,
+    threshold?: number
+  ) {
+    return createNotification({
+      userId,
+      type: NotificationType.MATERIAL_LOW_STOCK,
+      title: 'Low Stock Alert',
+      message: `${materialName} has only ${remainingQuantity} units remaining${threshold ? ` (below threshold of ${threshold})` : ''}`,
+      priority: NotificationPriority.HIGH,
+      data: { materialName, remainingQuantity, threshold },
+    });
+  }
+
+  // Create notification for site created
+  static async notifySiteCreated(userId: string, siteName: string, location: string) {
+    return createNotification({
+      userId,
+      type: NotificationType.SITE_CREATED,
+      title: 'New Site Created',
+      message: `${siteName} has been created in ${location}`,
+      priority: NotificationPriority.LOW,
+      data: { siteName, location },
+    });
+  }
+
+  // Create notification for price updated
+  static async notifyPriceUpdated(
+    userId: string,
+    materialName: string,
+    oldPrice: number,
+    newPrice: number
+  ) {
+    return createNotification({
+      userId,
+      type: NotificationType.PRICE_UPDATED,
+      title: 'Price Updated',
+      message: `${materialName} price changed from $${oldPrice} to $${newPrice}`,
+      priority: NotificationPriority.MEDIUM,
+      data: { materialName, oldPrice, newPrice },
+    });
+  }
+
+  // Create notification for record marked as received
+  static async notifyRecordReceived(
+    userId: string,
+    materialName: string,
+    status: string
+  ) {
+    return createNotification({
+      userId,
+      type: NotificationType.RECORD_RECEIVED,
+      title: 'Record Status Updated',
+      message: `${materialName} has been marked as ${status}`,
+      priority: NotificationPriority.LOW,
+      data: { materialName, status },
+    });
+  }
+
+  // Create generic system notification
+  static async notifySystem(userId: string, title: string, message: string) {
+    return createNotification({
+      userId,
+      type: NotificationType.SYSTEM,
+      title,
+      message,
+      priority: NotificationPriority.MEDIUM,
+    });
+  }
+}
+
+export default NotificationService;
