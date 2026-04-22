@@ -2,7 +2,7 @@ services:
   - type: web
     name: lilstock-backend
     runtime: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install typescript@5.3.3 --save-dev && npm run build
     startCommand: node dist/index.js
     envVars:
       - key: NODE_ENV

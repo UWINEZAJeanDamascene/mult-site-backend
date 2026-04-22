@@ -17,6 +17,7 @@ import materialsRoutes from './routes/materials';
 import actionLogsRoutes from './routes/actionLogs';
 import notificationsRoutes from './routes/notifications';
 import companiesRoutes from './routes/companies';
+import purchaseOrderRoutes from './routes/purchaseOrders';
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use('/api/materials', materialsRoutes);
 app.use('/api/action-logs', actionLogsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/companies', companiesRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 console.log('Action logs route registered at /api/action-logs');
 
 // Error handling middleware

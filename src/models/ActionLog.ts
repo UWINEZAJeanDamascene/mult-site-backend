@@ -24,6 +24,7 @@ export enum ResourceType {
   USER = 'user',
   SYSTEM = 'system',
   COMPANY = 'company',
+  PURCHASE_ORDER = 'purchase_order',
 }
 
 export interface IActionLog {
