@@ -7,3 +7,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_URL
+        value: mongodb+srv://siteStock:sitestock@cluster0.krocmmo.mongodb.net/
+      - key: FRONTEND_URL
+        value: https://mult-site-frontend.vercel.app
+      - key: JWT_SECRET
+        value: dev-secret-key-change-in-production
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: PORT
+        value: 3000
+      - key: WS_PORT
+        value: 3001

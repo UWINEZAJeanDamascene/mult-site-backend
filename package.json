@@ -33,6 +33,7 @@
     "mongodb": "^7.1.1",
     "mongoose": "^9.4.1",
     "prisma": "^5.7.0",
+    "typescript": "^5.3.3",
     "ws": "^8.14.2",
     "zod": "^3.22.4"
   },
@@ -50,8 +51,7 @@
     "nodemon": "^3.0.2",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "ts-node": "^10.9.2"
   },
   "engines": {
     "node": ">=18.0.0"
