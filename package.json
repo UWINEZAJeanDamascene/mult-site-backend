@@ -7,6 +7,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "postinstall": "tsc",
     "db:seed": "ts-node prisma/seed.ts",
     "test": "jest",
     "test:watch": "jest --watch",
