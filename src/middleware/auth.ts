@@ -25,7 +25,23 @@ export async function authenticateToken(
     const authHeader = req.headers['authorization'];
     // Support token from Authorization header or httpOnly cookie named access_token
     const tokenFromHeader = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-    const token = tokenFromHeader || (req.cookies && (req.cookies as any).access_token);
+    const tokenFromCookie = req.cookies && (req.cookies as any).access_token;
+    const token = tokenFromHeader || tokenFromCookie;
+
+    // Debug logging to help diagnose cross-origin cookie / header issues in deployments
+    try {
+      console.debug('[Auth] Incoming request origin:', req.headers.origin || 'none');
+      console.debug('[Auth] Authorization header present:', !!authHeader);
+      if (authHeader && typeof authHeader === 'string') {
+        console.debug('[Auth] Authorization header (masked):', authHeader.slice(0, 30) + (authHeader.length > 30 ? '...' : ''))
+      }
+      console.debug('[Auth] access_token cookie present:', !!tokenFromCookie);
+      if (tokenFromCookie && typeof tokenFromCookie === 'string') {
+        console.debug('[Auth] access_token cookie length:', tokenFromCookie.length);
+      }
+    } catch (err) {
+      console.debug('[Auth] Failed to log auth debug info', err);
+    }
 
     if (!token) {
       res.status(401).json({ error: 'Access token required' });
