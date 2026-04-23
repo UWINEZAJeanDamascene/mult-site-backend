@@ -10,7 +10,22 @@ const index_1 = require("./index");
 const uri = index_1.config.DATABASE_URL || 'mongodb://localhost:27017/siteSock';
 async function connectDB() {
     try {
-        await mongoose_1.default.connect(uri);
+        await mongoose_1.default.connect(uri, {
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+            socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+            maxPoolSize: 10, // Maintain up to 10 socket connections
+            bufferCommands: false, // Disable mongoose buffering
+        });
+        // Add connection event listeners
+        mongoose_1.default.connection.on('error', (err) => {
+            console.error('MongoDB connection error:', err);
+        });
+        mongoose_1.default.connection.on('disconnected', () => {
+            console.log('MongoDB disconnected');
+        });
+        mongoose_1.default.connection.on('reconnected', () => {
+            console.log('MongoDB reconnected');
+        });
         console.log('Connected to MongoDB via Mongoose');
     }
     catch (error) {

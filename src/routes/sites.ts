@@ -50,7 +50,7 @@ router.get('/:id', authenticateToken, async (req, res): Promise<void> => {
 
     // Check access for site managers
     if (req.user!.role === UserRole.SITE_MANAGER) {
-      const hasAccess = req.assignedSiteIds?.includes(id);
+      const hasAccess = req.assignedSiteIds?.includes(id as string);
       if (!hasAccess) {
         res.status(403).json({ error: 'Access denied to this site' });
         return;
@@ -58,7 +58,7 @@ router.get('/:id', authenticateToken, async (req, res): Promise<void> => {
     }
 
     const site = await Site.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(id as string),
       company_id,
     });
 
@@ -143,7 +143,7 @@ router.put('/:id', authenticateToken, requireMainStockManager, async (req, res):
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const site = await Site.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(id as string), company_id },
       { $set: updateData },
       { returnDocument: 'after' }
     );
@@ -177,7 +177,7 @@ router.get('/:id/details', authenticateToken, requireMainStockManager, async (re
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
-    const siteId = new mongoose.Types.ObjectId(id);
+    const siteId = new mongoose.Types.ObjectId(id as string);
 
     const site = await Site.findOne({ _id: siteId, company_id });
     if (!site) {
@@ -252,7 +252,7 @@ router.patch('/:id/active', authenticateToken, requireMainStockManager, async (r
     const company_id = req.user!.company_id;
 
     const site = await Site.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(id as string), company_id },
       { $set: { isActive } },
       { returnDocument: 'after' }
     );
@@ -281,7 +281,7 @@ router.delete('/:id', authenticateToken, requireMainStockManager, async (req, re
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
-    const siteId = new mongoose.Types.ObjectId(id);
+    const siteId = new mongoose.Types.ObjectId(id as string);
 
     // Find site first to get name for logging
     const site = await Site.findOne({ _id: siteId, company_id });
@@ -330,7 +330,7 @@ router.post('/:id/assign', authenticateToken, requireMainStockManager, async (re
       return;
     }
 
-    const siteId = new mongoose.Types.ObjectId(id);
+    const siteId = new mongoose.Types.ObjectId(id as string);
     const userObjId = new mongoose.Types.ObjectId(userId);
 
     // Verify site exists and belongs to company
@@ -372,7 +372,7 @@ router.delete('/:id/assign/:userId', authenticateToken, requireMainStockManager,
     const { id, userId } = req.params;
     const company_id = req.user!.company_id;
 
-    const siteId = new mongoose.Types.ObjectId(id);
+    const siteId = new mongoose.Types.ObjectId(id as string);
 
     // Verify site belongs to company
     const site = await Site.findOne({ _id: siteId, company_id });
@@ -398,7 +398,7 @@ router.delete('/:id/assign/:userId', authenticateToken, requireMainStockManager,
     });
 
     // Log site manager unassignment
-    await ActionLogService.logManagerUnassign(req, site._id.toString(), site.name, userId, user.name);
+    await ActionLogService.logManagerUnassign(req, site._id.toString(), site.name, userId as string, user.name);
 
     res.json({ message: 'Site manager removed successfully' });
   } catch (error) {
@@ -413,7 +413,7 @@ router.get('/:id/managers', authenticateToken, requireMainStockManager, async (r
     const { id } = req.params;
     const company_id = req.user!.company_id;
 
-    const siteId = new mongoose.Types.ObjectId(id);
+    const siteId = new mongoose.Types.ObjectId(id as string);
 
     // Verify site belongs to company
     const site = await Site.findOne({ _id: siteId, company_id });

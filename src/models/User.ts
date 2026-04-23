@@ -65,12 +65,20 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
 UserSchema.index({ company_id: 1, email: 1 });
 UserSchema.index({ company_id: 1, role: 1 });
 
-// Hash password before saving (work factor 12)
+// Hash password before saving (work factor 10 for faster login)
 (UserSchema as any).pre('save', async function (this: IUserDocument) {
-  if (!this.isModified('password')) return;
+  console.log('Pre-save hook - isModified(password):', this.isModified('password'));
+  console.log('Pre-save hook - password value:', this.password?.substring(0, 10) + '...');
+  
+  if (!this.isModified('password')) {
+    console.log('Pre-save hook - password not modified, skipping hash');
+    return;
+  }
 
-  const salt = await bcrypt.genSalt(12);
+  console.log('Pre-save hook - hashing password...');
+  const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  console.log('Pre-save hook - password hashed successfully');
 });
 
 // Compare password method

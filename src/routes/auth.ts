@@ -11,42 +11,23 @@ const router = Router();
 
 // Helper to get or create default company
 async function getOrCreateDefaultCompany(companyId?: string) {
-  // If valid ObjectId, try to find by ID
-  if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
-    const company = await Company.findById(companyId);
+  try {
+    // First try to find by company_id if provided
+    if (companyId) {
+      const company = await Company.findOne({ company_id: companyId });
+      if (company) return company;
+    }
+
+    // Try to find default company by name
+    const company = await Company.findOne({ name: 'Lilstock' });
     if (company) return company;
+
+    // If no company found, return null (don't create during login to avoid blocking)
+    return null;
+  } catch (error) {
+    console.error('Error during company lookup:', error);
+    return null; // Don't fail login due to company lookup issues
   }
-  
-  // Try to find by company_id directly (for string IDs like 'default-company')
-  if (companyId) {
-    const company = await Company.findOne({ company_id: companyId });
-    if (company) return company;
-    
-    // Also check by name
-    const byName = await Company.findOne({ name: 'Lilstock' });
-    if (byName) return byName;
-    
-    // Create new company with this company_id
-    const newCompany = await Company.create({
-      name: 'Lilstock',
-      company_id: companyId,
-      description: 'Multi-Site Stock Management System',
-    });
-    console.log('[Auth] Created company with company_id:', companyId, newCompany._id.toString());
-    return newCompany;
-  }
-  
-  // Try to find by name 'Lilstock'
-  let company = await Company.findOne({ name: 'Lilstock' });
-  if (company) return company;
-  
-  // Create default company without company_id
-  company = await Company.create({
-    name: 'Lilstock',
-    description: 'Multi-Site Stock Management System',
-  });
-  console.log('[Auth] Created default company:', company._id.toString());
-  return company;
 }
 
 // Register - Main stock manager can create users
@@ -120,6 +101,11 @@ router.post('/login', async (req, res): Promise<void> => {
       return;
     }
 
+    if (!user.isActive) {
+      res.status(401).json({ error: 'Account is deactivated' });
+      return;
+    }
+
     // Verify password using the model method
     const isValidPassword = await user.comparePassword(password);
     if (!isValidPassword) {
@@ -144,8 +130,9 @@ router.post('/login', async (req, res): Promise<void> => {
       assignedSites: assignedSitesData,
     });
 
-    // Log the login action
-    await ActionLogService.logLogin(req, user._id.toString(), user.name, user.email, user.role, user.company_id);
+    // Log the login action (fire-and-forget to avoid blocking)
+    ActionLogService.logLogin(req, user._id.toString(), user.name, user.email, user.role, user.company_id)
+      .catch(err => console.error('Failed to log login action:', err));
 
     // Fetch or create company data
     const company = await getOrCreateDefaultCompany(user.company_id);
@@ -322,8 +309,9 @@ router.get('/users', authenticateToken, async (req, res): Promise<void> => {
 router.put('/users/:id', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, email, role, assignedSiteIds, isActive } = req.body;
+    const { name, email, role, assignedSiteIds, isActive, password } = req.body;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     // Management roles can update users
     if (![UserRole.MAIN_MANAGER, UserRole.ACCOUNTANT, UserRole.MANAGER].includes(req.user!.role)) {
@@ -331,25 +319,34 @@ router.put('/users/:id', authenticateToken, async (req, res): Promise<void> => {
       return;
     }
 
-    const updateData: any = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (role) updateData.role = role;
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (assignedSiteIds) {
-      updateData.assignedSites = assignedSiteIds.map((id: string) => new mongoose.Types.ObjectId(id));
-    }
-
-    const user = await User.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
-      { $set: updateData },
-      { returnDocument: 'after' }
-    ).select('-password').populate('assignedSites', 'name');
+    // Find the user first
+    const user = await User.findOne({
+      _id: new mongoose.Types.ObjectId(idStr),
+      company_id,
+    }).populate('assignedSites', 'name');
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
+
+    // Update fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) user.role = role;
+    if (isActive !== undefined) user.isActive = isActive;
+    if (assignedSiteIds) {
+      user.assignedSites = assignedSiteIds.map((id: string) => new mongoose.Types.ObjectId(id));
+    }
+    if (password && password.length >= 6) {
+      console.log('Updating password for user:', user.email);
+      user.password = password; // Will be hashed by pre-save hook
+      user.markModified('password'); // Force mark as modified
+    }
+
+    // Save to trigger pre-save hook for password hashing
+    await user.save();
+    console.log('User saved, password modified:', user.isModified('password'));
 
     // Log user update
     await ActionLogService.logUserUpdate(req, user._id.toString(), user.name);
@@ -376,6 +373,7 @@ router.patch('/users/:id/active', authenticateToken, async (req, res): Promise<v
     const { id } = req.params;
     const { isActive } = req.body;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     // Management roles can toggle user status
     if (![UserRole.MAIN_MANAGER, UserRole.ACCOUNTANT, UserRole.MANAGER].includes(req.user!.role)) {
@@ -384,7 +382,7 @@ router.patch('/users/:id/active', authenticateToken, async (req, res): Promise<v
     }
 
     const user = await User.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(idStr), company_id },
       { $set: { isActive } },
       { returnDocument: 'after' }
     ).select('-password').populate('assignedSites', 'name');
@@ -419,6 +417,7 @@ router.post('/users/:id/sites', authenticateToken, async (req, res): Promise<voi
     const { id } = req.params;
     const { siteIds } = req.body;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     // Management roles can assign sites
     if (![UserRole.MAIN_MANAGER, UserRole.ACCOUNTANT, UserRole.MANAGER].includes(req.user!.role)) {
@@ -432,7 +431,7 @@ router.post('/users/:id/sites', authenticateToken, async (req, res): Promise<voi
     }
 
     const user = await User.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(idStr), company_id },
       { $set: { assignedSites: siteIds.map((id: string) => new mongoose.Types.ObjectId(id)) } },
       { returnDocument: 'after' }
     ).select('-password').populate('assignedSites', 'name');

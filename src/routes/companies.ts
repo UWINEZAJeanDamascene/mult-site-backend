@@ -12,9 +12,10 @@ const router = Router();
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     // Check if id is a valid MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(idStr)) {
       // If not valid ObjectId, return default company or create one
       let company = await Company.findOne({ name: 'Lilstock' });
       if (!company) {
@@ -49,11 +50,12 @@ router.patch(
     try {
       const { name, address, phone, email, website, taxId, industry, description, logo } = req.body;
       const { id } = req.params;
+      const idStr = Array.isArray(id) ? id[0] : id;
 
       let company;
 
       // Check if id is a valid MongoDB ObjectId
-      if (mongoose.Types.ObjectId.isValid(id)) {
+      if (mongoose.Types.ObjectId.isValid(idStr)) {
         company = await Company.findById(id);
         if (!company) {
           res.status(404).json({ error: 'Company not found' });
@@ -70,7 +72,7 @@ router.patch(
           // Create new company with this id as company_id
           company = await Company.create({
             name: name || 'Lilstock',
-            company_id: id,
+            company_id: idStr,
             address: address || '',
             phone: phone || '',
             email: email || '',
@@ -131,6 +133,7 @@ router.post(
     try {
       const { image } = req.body;
       const { id } = req.params;
+      const idStr = Array.isArray(id) ? id[0] : id;
 
       if (!image || typeof image !== 'string') {
         res.status(400).json({ error: 'Image is required' });
@@ -146,15 +149,15 @@ router.post(
       let company;
 
       // Check if id is a valid MongoDB ObjectId
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        company = await Company.findById(id);
+      if (mongoose.Types.ObjectId.isValid(idStr)) {
+        company = await Company.findById(idStr);
         if (!company) {
           res.status(404).json({ error: 'Company not found' });
           return;
         }
       } else {
         // Try to find by company_id field
-        company = await Company.findOne({ company_id: id });
+        company = await Company.findOne({ company_id: idStr });
         if (!company) {
           // Try by name
           company = await Company.findOne({ name: 'Lilstock' });
@@ -163,7 +166,7 @@ router.post(
           // Create new company
           company = await Company.create({
             name: 'Lilstock',
-            company_id: id,
+            company_id: idStr,
             logo: image,
           });
           res.json({ logo: image });

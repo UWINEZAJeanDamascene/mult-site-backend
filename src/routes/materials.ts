@@ -59,9 +59,10 @@ router.get('/:id', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const material = await Material.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -139,6 +140,7 @@ router.put('/:id', authenticateToken, requireMainStockManager, async (req, res):
     const { id } = req.params;
     const { name, unit, description } = req.body;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -146,7 +148,7 @@ router.put('/:id', authenticateToken, requireMainStockManager, async (req, res):
     if (description !== undefined) updateData.description = description;
 
     const material = await Material.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(idStr), company_id },
       { $set: updateData },
       { returnDocument: 'after' }
     );
@@ -180,9 +182,10 @@ router.patch('/:id/active', authenticateToken, requireMainStockManager, async (r
     const { id } = req.params;
     const { isActive } = req.body;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const material = await Material.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id), company_id },
+      { _id: new mongoose.Types.ObjectId(idStr), company_id },
       { $set: { isActive } },
       { returnDocument: 'after' }
     );
@@ -215,9 +218,10 @@ router.delete('/:id', authenticateToken, requireMainStockManager, async (req, re
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const material = await Material.findOneAndDelete({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 

@@ -72,12 +72,18 @@ const UserSchema = new mongoose_1.Schema({
 // Index for company-scoped queries
 UserSchema.index({ company_id: 1, email: 1 });
 UserSchema.index({ company_id: 1, role: 1 });
-// Hash password before saving (work factor 12)
+// Hash password before saving (work factor 10 for faster login)
 UserSchema.pre('save', async function () {
-    if (!this.isModified('password'))
+    console.log('Pre-save hook - isModified(password):', this.isModified('password'));
+    console.log('Pre-save hook - password value:', this.password?.substring(0, 10) + '...');
+    if (!this.isModified('password')) {
+        console.log('Pre-save hook - password not modified, skipping hash');
         return;
-    const salt = await bcryptjs_1.default.genSalt(12);
+    }
+    console.log('Pre-save hook - hashing password...');
+    const salt = await bcryptjs_1.default.genSalt(10);
     this.password = await bcryptjs_1.default.hash(this.password, salt);
+    console.log('Pre-save hook - password hashed successfully');
 });
 // Compare password method
 UserSchema.methods.comparePassword = async function (candidatePassword) {

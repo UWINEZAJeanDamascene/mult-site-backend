@@ -122,9 +122,10 @@ router.get('/:id', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     })
       .populate('site_id', 'name location')
@@ -259,9 +260,10 @@ router.put('/:id', authenticateToken, requireMainStockManager, async (req, res):
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -332,9 +334,10 @@ router.delete('/:id', authenticateToken, requireMainStockManager, async (req, re
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -349,14 +352,14 @@ router.delete('/:id', authenticateToken, requireMainStockManager, async (req, re
       return;
     }
 
-    await PurchaseOrder.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+    await PurchaseOrder.deleteOne({ _id: new mongoose.Types.ObjectId(idStr) });
 
     await ActionLogService.logFromRequest(
       req,
       ActionType.DELETE,
       ResourceType.PURCHASE_ORDER,
       `Deleted purchase order ${po.poNumber}`,
-      { resourceId: id, resourceName: po.poNumber }
+      { resourceId: idStr, resourceName: po.poNumber }
     );
 
     res.json({ message: 'Purchase order deleted successfully' });
@@ -371,9 +374,10 @@ router.patch('/:id/send', authenticateToken, requireMainStockManager, async (req
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -419,9 +423,10 @@ router.patch('/:id/receive', authenticateToken, async (req, res): Promise<void> 
     const { id } = req.params;
     const company_id = req.user!.company_id;
     const { receivedItems, date, notes } = req.body;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -517,9 +522,10 @@ router.patch('/:id/complete', authenticateToken, requireMainStockManager, async 
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -562,9 +568,10 @@ router.patch('/:id/cancel', authenticateToken, requireMainStockManager, async (r
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -607,9 +614,10 @@ router.post('/:id/duplicate', authenticateToken, requireMainStockManager, async 
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const originalPO = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     });
 
@@ -907,9 +915,10 @@ router.get('/:id/pdf', authenticateToken, async (req, res): Promise<void> => {
   try {
     const { id } = req.params;
     const company_id = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
     const po = await PurchaseOrder.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       company_id,
     }).populate('site_id', 'name location');
 

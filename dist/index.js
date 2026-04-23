@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -21,6 +54,7 @@ const materials_1 = __importDefault(require("./routes/materials"));
 const actionLogs_1 = __importDefault(require("./routes/actionLogs"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const companies_1 = __importDefault(require("./routes/companies"));
+const purchaseOrders_1 = __importDefault(require("./routes/purchaseOrders"));
 const app = (0, express_1.default)();
 // Middleware
 app.use((0, helmet_1.default)({
@@ -38,7 +72,7 @@ app.use(express_1.default.static(path_1.default.join(__dirname, '../frontend')))
 app.get('/health', async (_req, res) => {
     try {
         // Check database connection
-        const mongoose = (await import('./config/mongoose')).default;
+        const mongoose = (await Promise.resolve().then(() => __importStar(require('./config/mongoose')))).default;
         if (mongoose.connection.readyState === 1) {
             res.json({
                 status: 'healthy',
@@ -61,15 +95,16 @@ app.get('/health', async (_req, res) => {
     }
 });
 // API routes
-app.use('/api/auth', auth_1.default);
-app.use('/api/sites', sites_1.default);
-app.use('/api/site-records', siteRecords_1.default);
-app.use('/api/main-stock', mainStock_1.default);
-app.use('/api/views', views_1.default);
-app.use('/api/materials', materials_1.default);
-app.use('/api/action-logs', actionLogs_1.default);
-app.use('/api/notifications', notifications_1.default);
-app.use('/api/companies', companies_1.default);
+app.use('/auth', auth_1.default);
+app.use('/sites', sites_1.default);
+app.use('/site-records', siteRecords_1.default);
+app.use('/main-stock', mainStock_1.default);
+app.use('/views', views_1.default);
+app.use('/materials', materials_1.default);
+app.use('/action-logs', actionLogs_1.default);
+app.use('/notifications', notifications_1.default);
+app.use('/companies', companies_1.default);
+app.use('/purchase-orders', purchaseOrders_1.default);
 console.log('Action logs route registered at /api/action-logs');
 // Error handling middleware
 app.use((err, _req, res, _next) => {
@@ -85,9 +120,12 @@ app.use((_req, res) => {
 // Connect to database and start server
 async function startServer() {
     try {
+        console.log('Connecting to database...');
         await (0, mongoose_1.connectDB)();
+        console.log('Database connected successfully');
         const server = app.listen(config_1.config.PORT, () => {
             console.log(`API server running on port ${config_1.config.PORT}`);
+            console.log(`Health check available at http://localhost:${config_1.config.PORT}/health`);
         });
         // Initialize WebSocket server
         (0, server_1.initializeWebSocketServer)();

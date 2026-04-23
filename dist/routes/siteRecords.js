@@ -242,13 +242,14 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         // Validate ObjectId format
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+        if (!mongoose_1.default.Types.ObjectId.isValid(idStr)) {
             res.status(400).json({ error: 'Invalid record ID format' });
             return;
         }
         const record = await models_1.SiteRecord.findOne({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             company_id,
         }).populate('site_id', 'name location');
         if (!record) {
@@ -363,14 +364,15 @@ router.put('/:id', auth_1.authenticateToken, async (req, res) => {
         const { id } = req.params;
         const { materialName, quantityReceived, quantityUsed, date, notes } = req.body;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         // Validate ObjectId format
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+        if (!mongoose_1.default.Types.ObjectId.isValid(idStr)) {
             res.status(400).json({ error: 'Invalid record ID format' });
             return;
         }
         // Get existing record
         const existingRecord = await models_1.SiteRecord.findOne({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             company_id,
         });
         if (!existingRecord) {
@@ -407,7 +409,7 @@ router.put('/:id', auth_1.authenticateToken, async (req, res) => {
             return;
         }
         // Re-sync to main stock
-        const mainStock = await (0, autoAdjustment_1.syncSiteRecordToMainStock)(id);
+        const mainStock = await (0, autoAdjustment_1.syncSiteRecordToMainStock)(idStr);
         // Log site record update
         await actionLogService_1.ActionLogService.logFromRequest(req, models_1.ActionType.UPDATE, models_1.ResourceType.SITE_RECORD, `Updated site record: ${updatedRecord.materialName}`, {
             resourceId: updatedRecord._id.toString(),
@@ -442,18 +444,169 @@ router.put('/:id', auth_1.authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to update site record' });
     }
 });
+// Get site inventory - aggregated view of materials available at sites (from PO receipts)
+router.get('/inventory/my', auth_1.authenticateToken, async (req, res) => {
+    try {
+        const company_id = req.user.company_id;
+        // Site managers only see their assigned sites
+        let siteIds = [];
+        if (req.user.role === types_1.UserRole.SITE_MANAGER) {
+            if (!req.assignedSiteIds || req.assignedSiteIds.length === 0) {
+                res.json({ inventory: [] });
+                return;
+            }
+            siteIds = req.assignedSiteIds;
+        }
+        const siteObjectIds = siteIds
+            .filter(id => mongoose_1.default.Types.ObjectId.isValid(id))
+            .map(id => new mongoose_1.default.Types.ObjectId(id));
+        // Aggregate pipeline to get inventory by material and site
+        const pipeline = [
+            {
+                $match: {
+                    company_id,
+                    ...(siteObjectIds.length > 0 && { site_id: { $in: siteObjectIds } }),
+                },
+            },
+            {
+                $group: {
+                    _id: { materialName: '$materialName', site_id: '$site_id' },
+                    totalReceived: { $sum: '$quantityReceived' },
+                    totalUsed: { $sum: '$quantityUsed' },
+                    records: { $push: '$$ROOT' },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    materialName: '$_id.materialName',
+                    site_id: '$_id.site_id',
+                    totalReceived: 1,
+                    totalUsed: 1,
+                    remainingQuantity: { $subtract: ['$totalReceived', '$totalUsed'] },
+                    lastReceivedDate: { $max: '$records.date' },
+                },
+            },
+            {
+                $match: {
+                    remainingQuantity: { $gt: 0 }, // Only show materials with remaining quantity
+                },
+            },
+            {
+                $sort: { materialName: 1 },
+            },
+        ];
+        const inventory = await models_1.SiteRecord.aggregate(pipeline);
+        // Populate site names
+        const siteIdsFromInventory = inventory.map(item => item.site_id.toString());
+        const sites = await models_1.Site.find({ _id: { $in: siteIdsFromInventory.map((id) => new mongoose_1.default.Types.ObjectId(id)) } });
+        const siteMap = new Map(sites.map((s) => [s._id.toString(), s.name]));
+        res.json({
+            inventory: inventory.map(item => ({
+                materialName: item.materialName,
+                siteId: item.site_id.toString(),
+                siteName: siteMap.get(item.site_id.toString()) || 'Unknown Site',
+                totalReceived: item.totalReceived,
+                totalUsed: item.totalUsed,
+                remainingQuantity: item.remainingQuantity,
+                lastReceivedDate: item.lastReceivedDate,
+            })),
+        });
+    }
+    catch (error) {
+        console.error('Get site inventory error:', error);
+        res.status(500).json({ error: 'Failed to fetch site inventory' });
+    }
+});
+// Record usage against available materials at site
+router.post('/usage', auth_1.authenticateToken, (0, auth_1.requireSiteAccess)('siteId'), async (req, res) => {
+    try {
+        const { siteId, materialName, quantityUsed, date, notes } = req.body;
+        const company_id = req.user.company_id;
+        // Validate
+        if (!siteId || !materialName || !quantityUsed || !date) {
+            res.status(400).json({
+                error: 'Site ID, material name, quantity used, and date are required',
+            });
+            return;
+        }
+        if (quantityUsed <= 0) {
+            res.status(400).json({ error: 'Quantity used must be greater than 0' });
+            return;
+        }
+        // Check available quantity
+        const availableRecords = await models_1.SiteRecord.find({
+            site_id: new mongoose_1.default.Types.ObjectId(siteId),
+            materialName,
+            company_id,
+        });
+        const totalReceived = availableRecords.reduce((sum, r) => sum + (r.quantityReceived || 0), 0);
+        const totalUsed = availableRecords.reduce((sum, r) => sum + (r.quantityUsed || 0), 0);
+        const availableQty = totalReceived - totalUsed;
+        if (quantityUsed > availableQty) {
+            res.status(400).json({
+                error: `Cannot use more than available quantity. Available: ${availableQty}, Requested: ${quantityUsed}`,
+            });
+            return;
+        }
+        // Create usage record (SiteRecord with quantityUsed only)
+        const record = await models_1.SiteRecord.create({
+            site_id: new mongoose_1.default.Types.ObjectId(siteId),
+            materialName,
+            quantityReceived: 0,
+            quantityUsed,
+            date: new Date(date),
+            notes: notes || `Usage recorded for ${materialName}`,
+            recordedBy: new mongoose_1.default.Types.ObjectId(req.user.id),
+            company_id,
+            syncedToMainStock: false,
+        });
+        // Log action
+        await actionLogService_1.ActionLogService.logFromRequest(req, models_1.ActionType.CREATE, models_1.ResourceType.SITE_RECORD, `Recorded usage: ${materialName} - ${quantityUsed} units`, {
+            resourceId: record._id.toString(),
+            resourceName: materialName,
+            details: {
+                quantityUsed,
+                date: record.date,
+                notes: record.notes,
+                siteId,
+            },
+        });
+        // Broadcast update
+        (0, server_1.broadcastToClients)({
+            type: 'SITE_RECORD_CREATED',
+            payload: { siteRecord: { ...record.toObject(), id: record._id.toString() }, isUsageRecord: true },
+            timestamp: new Date(),
+        });
+        res.status(201).json({
+            id: record._id.toString(),
+            site_id: siteId,
+            materialName: record.materialName,
+            quantityUsed: record.quantityUsed,
+            date: record.date,
+            notes: record.notes,
+            availableQuantity: availableQty - quantityUsed,
+            createdAt: record.createdAt,
+        });
+    }
+    catch (error) {
+        console.error('Record usage error:', error);
+        res.status(500).json({ error: 'Failed to record usage' });
+    }
+});
 // Delete site record
 router.delete('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         // Validate ObjectId format
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+        if (!mongoose_1.default.Types.ObjectId.isValid(idStr)) {
             res.status(400).json({ error: 'Invalid record ID format' });
             return;
         }
         const record = await models_1.SiteRecord.findOne({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             company_id,
         });
         if (!record) {

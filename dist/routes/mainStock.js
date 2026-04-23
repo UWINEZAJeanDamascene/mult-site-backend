@@ -479,8 +479,9 @@ router.post('/bulk-price', auth_1.authenticateToken, auth_1.requireMainStockMana
 router.get('/:id/movements', auth_1.authenticateToken, auth_1.requireMainStockManager, async (req, res) => {
     try {
         const { id } = req.params;
+        const idStr = Array.isArray(id) ? id[0] : id;
         const movements = await StockMovement_1.default.find({
-            mainStock_id: new mongoose_1.default.Types.ObjectId(id),
+            mainStock_id: new mongoose_1.default.Types.ObjectId(idStr),
         }).sort({ date: -1 });
         res.json(movements);
     }

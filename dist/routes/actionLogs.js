@@ -156,12 +156,13 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
         }
         const { id } = req.params;
         const companyId = req.user.company_id;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+        const idStr = Array.isArray(id) ? id[0] : id;
+        if (!mongoose_1.default.Types.ObjectId.isValid(idStr)) {
             res.status(400).json({ error: 'Invalid log ID' });
             return;
         }
         const log = await ActionLog_1.ActionLog.findOne({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             companyId,
         }).lean();
         if (!log) {

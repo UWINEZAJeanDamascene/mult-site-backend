@@ -21,7 +21,8 @@ export declare enum ResourceType {
     MATERIAL = "material",
     USER = "user",
     SYSTEM = "system",
-    COMPANY = "company"
+    COMPANY = "company",
+    PURCHASE_ORDER = "purchase_order"
 }
 export interface IActionLog {
     userId: mongoose.Types.ObjectId;

@@ -1,5 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 export interface IPOItem {
+    _id?: mongoose.Types.ObjectId;
     materialName: string;
     material_id?: mongoose.Types.ObjectId;
     description?: string;

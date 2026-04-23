@@ -60,6 +60,7 @@ var ResourceType;
     ResourceType["USER"] = "user";
     ResourceType["SYSTEM"] = "system";
     ResourceType["COMPANY"] = "company";
+    ResourceType["PURCHASE_ORDER"] = "purchase_order";
 })(ResourceType || (exports.ResourceType = ResourceType = {}));
 const ActionLogSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },

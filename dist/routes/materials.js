@@ -58,8 +58,9 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         const material = await models_1.Material.findOne({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             company_id,
         });
         if (!material) {
@@ -129,6 +130,7 @@ router.put('/:id', auth_1.authenticateToken, auth_1.requireMainStockManager, asy
         const { id } = req.params;
         const { name, unit, description } = req.body;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         const updateData = {};
         if (name)
             updateData.name = name;
@@ -136,7 +138,7 @@ router.put('/:id', auth_1.authenticateToken, auth_1.requireMainStockManager, asy
             updateData.unit = unit;
         if (description !== undefined)
             updateData.description = description;
-        const material = await models_1.Material.findOneAndUpdate({ _id: new mongoose_1.default.Types.ObjectId(id), company_id }, { $set: updateData }, { returnDocument: 'after' });
+        const material = await models_1.Material.findOneAndUpdate({ _id: new mongoose_1.default.Types.ObjectId(idStr), company_id }, { $set: updateData }, { returnDocument: 'after' });
         if (!material) {
             res.status(404).json({ error: 'Material not found' });
             return;
@@ -164,7 +166,8 @@ router.patch('/:id/active', auth_1.authenticateToken, auth_1.requireMainStockMan
         const { id } = req.params;
         const { isActive } = req.body;
         const company_id = req.user.company_id;
-        const material = await models_1.Material.findOneAndUpdate({ _id: new mongoose_1.default.Types.ObjectId(id), company_id }, { $set: { isActive } }, { returnDocument: 'after' });
+        const idStr = Array.isArray(id) ? id[0] : id;
+        const material = await models_1.Material.findOneAndUpdate({ _id: new mongoose_1.default.Types.ObjectId(idStr), company_id }, { $set: { isActive } }, { returnDocument: 'after' });
         if (!material) {
             res.status(404).json({ error: 'Material not found' });
             return;
@@ -191,8 +194,9 @@ router.delete('/:id', auth_1.authenticateToken, auth_1.requireMainStockManager, 
     try {
         const { id } = req.params;
         const company_id = req.user.company_id;
+        const idStr = Array.isArray(id) ? id[0] : id;
         const material = await models_1.Material.findOneAndDelete({
-            _id: new mongoose_1.default.Types.ObjectId(id),
+            _id: new mongoose_1.default.Types.ObjectId(idStr),
             company_id,
         });
         if (!material) {

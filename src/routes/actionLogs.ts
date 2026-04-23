@@ -174,14 +174,15 @@ router.get('/:id', authenticateToken, async (req, res): Promise<void> => {
 
     const { id } = req.params;
     const companyId = req.user!.company_id;
+    const idStr = Array.isArray(id) ? id[0] : id;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(idStr)) {
       res.status(400).json({ error: 'Invalid log ID' });
       return;
     }
 
     const log = await ActionLog.findOne({
-      _id: new mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(idStr),
       companyId,
     }).lean();
 

@@ -61,16 +61,16 @@ app.get('/health', async (_req, res) => {
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/sites', sitesRoutes);
-app.use('/api/site-records', siteRecordsRoutes);
-app.use('/api/main-stock', mainStockRoutes);
-app.use('/api/views', viewsRoutes);
-app.use('/api/materials', materialsRoutes);
-app.use('/api/action-logs', actionLogsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/companies', companiesRoutes);
-app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/auth', authRoutes);
+app.use('/sites', sitesRoutes);
+app.use('/site-records', siteRecordsRoutes);
+app.use('/main-stock', mainStockRoutes);
+app.use('/views', viewsRoutes);
+app.use('/materials', materialsRoutes);
+app.use('/action-logs', actionLogsRoutes);
+app.use('/notifications', notificationsRoutes);
+app.use('/companies', companiesRoutes);
+app.use('/purchase-orders', purchaseOrderRoutes);
 console.log('Action logs route registered at /api/action-logs');
 
 // Error handling middleware
@@ -89,10 +89,13 @@ app.use((_req, res) => {
 // Connect to database and start server
 async function startServer() {
   try {
+    console.log('Connecting to database...');
     await connectDB();
+    console.log('Database connected successfully');
 
     const server = app.listen(config.PORT, () => {
       console.log(`API server running on port ${config.PORT}`);
+      console.log(`Health check available at http://localhost:${config.PORT}/health`);
     });
 
     // Initialize WebSocket server
