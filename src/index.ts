@@ -74,8 +74,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Parse cookies for authentication
 app.use(cookieParser());
 
-// Serve frontend static files
-app.use(express.static(path.join(__dirname, '../frontend')));
+// API info endpoint
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'Lilstock API Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: '/auth/*',
+      sites: '/sites/*',
+      'main-stock': '/main-stock/*',
+      'purchase-orders': '/purchase-orders/*',
+      // Add other endpoints as needed
+    }
+  });
+});
 
 // Health check
 app.get('/health', async (_req, res) => {
@@ -113,7 +126,7 @@ app.use('/action-logs', actionLogsRoutes);
 app.use('/notifications', notificationsRoutes);
 app.use('/companies', companiesRoutes);
 app.use('/purchase-orders', purchaseOrderRoutes);
-console.log('Action logs route registered at /api/action-logs');
+console.log('Routes registered successfully');
 
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
