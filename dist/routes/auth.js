@@ -126,10 +126,12 @@ router.post('/login', async (req, res) => {
         // Fetch or create company data
         const company = await getOrCreateDefaultCompany(user.company_id);
         // Set httpOnly cookie for session persistence (backend stores the token)
+        // For cross-site frontend/backends (e.g. Vercel frontend, Render backend)
+        // cookies must be set with SameSite=None and Secure in production.
         res.cookie('access_token', token, {
             httpOnly: true,
             secure: config_1.config.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: config_1.config.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         res.json({
@@ -171,7 +173,12 @@ router.post('/login', async (req, res) => {
 // Logout - clear cookie
 router.post('/logout', auth_2.authenticateToken, async (req, res) => {
     try {
-        res.clearCookie('access_token');
+        // Ensure we clear the cookie using the same attributes so the browser removes it
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: config_1.config.NODE_ENV === 'production',
+            sameSite: config_1.config.NODE_ENV === 'production' ? 'none' : 'lax',
+        });
         res.json({ message: 'Logged out' });
     }
     catch (error) {

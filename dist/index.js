@@ -40,7 +40,6 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const helmet_1 = __importDefault(require("helmet"));
-const path_1 = __importDefault(require("path"));
 const config_1 = require("./config");
 const server_1 = require("./websocket/server");
 const mongoose_1 = require("./config/mongoose");
@@ -61,13 +60,65 @@ app.use((0, helmet_1.default)({
     contentSecurityPolicy: false,
 }));
 // Allow cross-origin requests with credentials (cookies)
-app.use((0, cors_1.default)({ origin: true, credentials: true }));
+app.use((0, cors_1.default)({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin)
+            return callback(null, true);
+        // In development, allow localhost
+        if (config_1.config.NODE_ENV !== 'production') {
+            const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+            if (devOrigins.some(devOrigin => origin.startsWith(devOrigin.split(':')[1]))) {
+                return callback(null, true);
+            }
+        }
+        // In production, allow Vercel domains and your specific domain
+        if (config_1.config.NODE_ENV === 'production') {
+            const prodOrigins = [
+                'https://mult-sitef-frontend.vercel.app',
+                'https://mult-site-frontend.vercel.app',
+                'https://mult-sitef-frontend.vercel.app',
+                /\.vercel\.app$/
+            ];
+            const isAllowed = prodOrigins.some(allowed => {
+                if (typeof allowed === 'string') {
+                    return origin === allowed;
+                }
+                else if (allowed instanceof RegExp) {
+                    return allowed.test(origin);
+                }
+                return false;
+            });
+            if (isAllowed) {
+                return callback(null, true);
+            }
+        }
+        console.log('CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Parse cookies for authentication
 app.use((0, cookie_parser_1.default)());
-// Serve frontend static files
-app.use(express_1.default.static(path_1.default.join(__dirname, '../frontend')));
+// API info endpoint
+app.get('/', (_req, res) => {
+    res.json({
+        message: 'Lilstock API Server',
+        version: '1.0.0',
+        endpoints: {
+            health: '/health',
+            auth: '/auth/*',
+            sites: '/sites/*',
+            'main-stock': '/main-stock/*',
+            'purchase-orders': '/purchase-orders/*',
+            // Add other endpoints as needed
+        }
+    });
+});
 // Health check
 app.get('/health', async (_req, res) => {
     try {
@@ -105,7 +156,7 @@ app.use('/action-logs', actionLogs_1.default);
 app.use('/notifications', notifications_1.default);
 app.use('/companies', companies_1.default);
 app.use('/purchase-orders', purchaseOrders_1.default);
-console.log('Action logs route registered at /api/action-logs');
+console.log('Routes registered successfully');
 // Error handling middleware
 app.use((err, _req, res, _next) => {
     console.error('Error:', err);
