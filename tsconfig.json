@@ -6,6 +6,7 @@
     "ignoreDeprecations": "6.0",
     "lib": ["ES2022", "DOM"],
     "typeRoots": ["./node_modules/@types"],
+    "types": ["node"],   
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -24,7 +25,5 @@
     "alwaysStrict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/__tests__"]
+  }
 }
