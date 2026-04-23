@@ -137,16 +137,7 @@ router.post('/login', async (req, res): Promise<void> => {
     // Fetch or create company data
     const company = await getOrCreateDefaultCompany(user.company_id);
 
-     // Set httpOnly cookie for session persistence (backend stores the token)
-     // For cross-site frontend/backends (e.g. Vercel frontend, Render backend)
-     // cookies must be set with SameSite=None and Secure in production.
-     res.cookie('access_token', token, {
-       httpOnly: true,
-       secure: config.NODE_ENV === 'production',
-       sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
-       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-     });
-
+     // Return token in JSON for localStorage-based auth (works across devices)
      res.json({
        token,
        user: {
@@ -184,21 +175,15 @@ router.post('/login', async (req, res): Promise<void> => {
   }
 });
 
-// Logout - clear cookie
+// Logout - frontend clears localStorage, backend just confirms
 router.post('/logout', authenticateToken, async (req, res): Promise<void> => {
     try {
-      // Ensure we clear the cookie using the same attributes so the browser removes it
-      res.clearCookie('access_token', {
-        httpOnly: true,
-        secure: config.NODE_ENV === 'production',
-        sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
-      });
       res.json({ message: 'Logged out' });
     } catch (error) {
       console.error('Logout error:', error);
       res.status(500).json({ error: 'Failed to logout' });
     }
-});
+  });
 
 // Get current user
 router.get('/me', authenticateToken, async (req, res): Promise<void> => {

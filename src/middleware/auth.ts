@@ -22,11 +22,9 @@ export async function authenticateToken(
   next: NextFunction
 ): Promise<void> {
   try {
-    const authHeader = req.headers['authorization'];
-    // Support token from Authorization header or httpOnly cookie named access_token
-    const tokenFromHeader = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-    const tokenFromCookie = req.cookies && (req.cookies as any).access_token;
-    const token = tokenFromHeader || tokenFromCookie;
+    // Get token from Authorization header only (works across devices via localStorage)
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
     // Debug logging to help diagnose cross-origin cookie / header issues in deployments
     try {
@@ -34,10 +32,6 @@ export async function authenticateToken(
       console.debug('[Auth] Authorization header present:', !!authHeader);
       if (authHeader && typeof authHeader === 'string') {
         console.debug('[Auth] Authorization header (masked):', authHeader.slice(0, 30) + (authHeader.length > 30 ? '...' : ''))
-      }
-      console.debug('[Auth] access_token cookie present:', !!tokenFromCookie);
-      if (tokenFromCookie && typeof tokenFromCookie === 'string') {
-        console.debug('[Auth] access_token cookie length:', tokenFromCookie.length);
       }
     } catch (err) {
       console.debug('[Auth] Failed to log auth debug info', err);
