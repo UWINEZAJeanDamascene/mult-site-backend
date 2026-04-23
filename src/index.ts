@@ -106,6 +106,29 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+// Debug endpoint to inspect incoming request auth headers/cookies (safe: does not return tokens)
+app.get('/debug/request-info', (req, res) => {
+  try {
+    const origin = req.headers.origin || null;
+    const hasAuthHeader = !!req.headers.authorization;
+    const hasCookie = !!(req.cookies && (req.cookies as any).access_token);
+    const authHeaderSample = typeof req.headers.authorization === 'string'
+      ? req.headers.authorization.slice(0, 40) + (req.headers.authorization.length > 40 ? '...' : '')
+      : null;
+    const cookieLength = req.cookies && (req.cookies as any).access_token ? (req.cookies as any).access_token.length : 0;
+
+    res.json({
+      origin,
+      hasAuthHeader,
+      hasCookie,
+      authHeaderSample,
+      cookieLength,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to inspect request' });
+  }
+});
+
 // API routes
 app.use('/auth', authRoutes);
 app.use('/sites', sitesRoutes);
