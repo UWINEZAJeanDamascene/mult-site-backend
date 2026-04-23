@@ -28,23 +28,46 @@ app.use(helmet({
 // Allow cross-origin requests with credentials (cookies)
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, etc.)
+    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
-    // Allow specific origins
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://mult-sitef-frontend.vercel.app'
-    ];
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    // In development, allow localhost
+    if (config.NODE_ENV !== 'production') {
+      const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+      if (devOrigins.some(devOrigin => origin.startsWith(devOrigin.split(':')[1]))) {
+        return callback(null, true);
+      }
     }
 
+    // In production, allow Vercel domains and your specific domain
+    if (config.NODE_ENV === 'production') {
+      const prodOrigins = [
+        'https://mult-sitef-frontend.vercel.app',
+        'https://mult-site-frontend.vercel.app',
+        'https://mult-sitef-frontend.vercel.app',
+        /\.vercel\.app$/
+      ];
+
+      const isAllowed = prodOrigins.some(allowed => {
+        if (typeof allowed === 'string') {
+          return origin === allowed;
+        } else if (allowed instanceof RegExp) {
+          return allowed.test(origin);
+        }
+        return false;
+      });
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+    }
+
+    console.log('CORS blocked origin:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
