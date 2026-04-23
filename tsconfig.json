@@ -25,5 +25,11 @@
     "alwaysStrict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+ "exclude": [
+  "node_modules",
+  "dist",
+  "src/__tests__",
+  "prisma"
+]
 }
