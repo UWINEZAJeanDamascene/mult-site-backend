@@ -137,46 +137,47 @@ router.post('/login', async (req, res): Promise<void> => {
     // Fetch or create company data
     const company = await getOrCreateDefaultCompany(user.company_id);
 
-    // Set httpOnly cookie for session persistence (backend stores the token)
-    // For cross-site frontend/backends (e.g. Vercel frontend, Render backend)
-    // cookies must be set with SameSite=None and Secure in production.
-    res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: config.NODE_ENV === 'production',
-      sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+     // Set httpOnly cookie for session persistence (backend stores the token)
+     // For cross-site frontend/backends (e.g. Vercel frontend, Render backend)
+     // cookies must be set with SameSite=None and Secure in production.
+     res.cookie('access_token', token, {
+       httpOnly: true,
+       secure: config.NODE_ENV === 'production',
+       sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
+       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+     });
 
-    res.json({
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        company_id: user.company_id,
-        assignedSites: assignedSitesData,
-        // Profile fields
-        profilePicture: user.profilePicture,
-        phone: user.phone,
-        department: user.department,
-        jobTitle: user.jobTitle,
-        bio: user.bio,
-        location: user.location,
-        // Company data
-        company: company ? {
-          id: company._id.toString(),
-          name: company.name,
-          logo: company.logo,
-          address: company.address,
-          phone: company.phone,
-          email: company.email,
-          website: company.website,
-          taxId: company.taxId,
-          industry: company.industry,
-          description: company.description,
-        } : null,
-      },
-    });
+     res.json({
+       token,
+       user: {
+         id: user._id.toString(),
+         email: user.email,
+         name: user.name,
+         role: user.role,
+         company_id: user.company_id,
+         assignedSites: assignedSitesData,
+         // Profile fields
+         profilePicture: user.profilePicture,
+         phone: user.phone,
+         department: user.department,
+         jobTitle: user.jobTitle,
+         bio: user.bio,
+         location: user.location,
+         // Company data
+         company: company ? {
+           id: company._id.toString(),
+           name: company.name,
+           logo: company.logo,
+           address: company.address,
+           phone: company.phone,
+           email: company.email,
+           website: company.website,
+           taxId: company.taxId,
+           industry: company.industry,
+           description: company.description,
+         } : null,
+       },
+     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
