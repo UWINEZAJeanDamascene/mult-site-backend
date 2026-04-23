@@ -8,7 +8,7 @@
     "typeRoots": ["./node_modules/@types"],
     "types": ["node"],   
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./src", 
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
