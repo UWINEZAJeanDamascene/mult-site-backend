@@ -79,6 +79,7 @@ export async function authenticateToken(
 
     next();
   } catch (error) {
+    console.error('[Auth] Token verification failed:', error);
     res.status(403).json({ error: 'Invalid or expired token' });
     return;
   }
