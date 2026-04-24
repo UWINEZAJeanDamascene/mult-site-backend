@@ -405,6 +405,125 @@ router.post(
   }
 );
 
+// Bulk create site records (site managers for their sites only)
+router.post(
+  '/bulk',
+  authenticateToken,
+  async (req, res): Promise<void> => {
+    try {
+      const records = req.body as Array<{
+        materialName: string
+        quantityReceived: number
+        quantityUsed?: number
+        date: string
+        notes?: string
+        siteId: string
+      }>
+      const company_id = req.user!.company_id
+
+      // Validate records array
+      if (!Array.isArray(records) || records.length === 0) {
+        res.status(400).json({ error: 'At least one record is required' })
+        return
+      }
+
+      // Validate each record
+      for (const record of records) {
+        if (!record.materialName || !record.siteId || !record.date) {
+          res.status(400).json({
+            error: 'Each record must have materialName, siteId, and date',
+          })
+          return
+        }
+      }
+
+      // Check site access for site managers
+      if (req.user!.role === UserRole.SITE_MANAGER) {
+        const allowedSiteIds = req.assignedSiteIds || []
+        for (const record of records) {
+          if (!allowedSiteIds.includes(record.siteId)) {
+            res.status(403).json({
+              error: `Access denied to site: ${record.siteId}`,
+            })
+            return
+          }
+        }
+      }
+
+      // Create all records
+      const createdRecords = []
+      for (const recordData of records) {
+        const record = await SiteRecord.create({
+          site_id: new mongoose.Types.ObjectId(recordData.siteId),
+          materialName: recordData.materialName,
+          quantityReceived: recordData.quantityReceived || 0,
+          quantityUsed: recordData.quantityUsed || 0,
+          date: new Date(recordData.date),
+          notes: recordData.notes,
+          recordedBy: new mongoose.Types.ObjectId(req.user!.id),
+          company_id,
+          syncedToMainStock: false,
+        })
+
+        const recordId = record._id.toString()
+
+        // Auto-sync to main stock
+        const mainStockRecord = await syncSiteRecordToMainStock(recordId)
+
+        // Log site record creation
+        await ActionLogService.logFromRequest(
+          req,
+          ActionType.CREATE,
+          ResourceType.SITE_RECORD,
+          `Recorded material: ${record.materialName}`,
+          {
+            resourceId: recordId,
+            resourceName: record.materialName,
+            details: {
+              quantityReceived: record.quantityReceived,
+              quantityUsed: record.quantityUsed,
+              date: record.date,
+              notes: record.notes,
+              siteId: record.site_id,
+            },
+          }
+        )
+
+        // Log sync to main stock
+        await ActionLogService.logSyncToMainStock(req, record._id.toString(), record.materialName, record.quantityReceived)
+
+        createdRecords.push({
+          id: recordId,
+          site_id: recordData.siteId,
+          materialName: record.materialName,
+          quantityReceived: record.quantityReceived,
+          quantityUsed: record.quantityUsed,
+          date: record.date,
+          notes: record.notes,
+          syncedToMainStock: true,
+          mainStockEntryId: mainStockRecord?._id?.toString(),
+          createdAt: record.createdAt,
+        })
+      }
+
+      // Broadcast bulk update to WebSocket clients
+      broadcastToClients({
+        type: 'SITE_RECORDS_BULK_CREATED',
+        payload: { count: createdRecords.length, records: createdRecords },
+        timestamp: new Date(),
+      })
+
+      res.status(201).json({
+        message: `${createdRecords.length} records created successfully`,
+        records: createdRecords,
+      })
+    } catch (error) {
+      console.error('Bulk create site records error:', error)
+      res.status(500).json({ error: 'Failed to create records' })
+    }
+  }
+)
+
 // Update site record
 router.put(
   '/:id',

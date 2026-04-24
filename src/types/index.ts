@@ -151,7 +151,7 @@ export interface AuthenticatedRequest {
 
 // WebSocket Types
 export interface StockUpdateEvent {
-  type: 'SITE_RECORD_CREATED' | 'SITE_RECORD_UPDATED' | 'MAIN_STOCK_UPDATED' | 'VIEWS_UPDATED';
+  type: 'SITE_RECORD_CREATED' | 'SITE_RECORD_UPDATED' | 'SITE_RECORDS_BULK_CREATED' | 'MAIN_STOCK_UPDATED' | 'VIEWS_UPDATED';
   payload: unknown;
   timestamp: Date;
 }
