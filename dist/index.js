@@ -60,40 +60,31 @@ app.use((0, helmet_1.default)({
     contentSecurityPolicy: false,
 }));
 // Allow cross-origin requests with credentials (cookies)
+// CORS configuration: allow the configured FRONTEND_URL, any vercel.app subdomain,
+// and common localhost dev origins. Echo the request origin when allowing credentials.
 app.use((0, cors_1.default)({
     origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
+        // Allow requests with no origin (curl, Postman, mobile apps)
         if (!origin)
             return callback(null, true);
-        // In development, allow localhost
-        if (config_1.config.NODE_ENV !== 'production') {
-            const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
-            if (devOrigins.some(devOrigin => origin.startsWith(devOrigin.split(':')[1]))) {
+        const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+        // Allow explicit FRONTEND_URL from env (useful for custom domains)
+        const frontendUrl = config_1.config.FRONTEND_URL;
+        // Allow localhost during development and the configured frontend URL
+        if (devOrigins.includes(origin) || origin === frontendUrl) {
+            return callback(null, true);
+        }
+        // Allow any vercel.app subdomain (production preview and deployments)
+        try {
+            const vercelRegex = /\.vercel\.app$/i;
+            if (vercelRegex.test(origin)) {
                 return callback(null, true);
             }
         }
-        // In production, allow Vercel domains and your specific domain
-        if (config_1.config.NODE_ENV === 'production') {
-            const prodOrigins = [
-                'https://mult-sitef-frontend.vercel.app',
-                'https://mult-site-frontend.vercel.app',
-                'https://mult-sitef-frontend.vercel.app',
-                /\.vercel\.app$/
-            ];
-            const isAllowed = prodOrigins.some(allowed => {
-                if (typeof allowed === 'string') {
-                    return origin === allowed;
-                }
-                else if (allowed instanceof RegExp) {
-                    return allowed.test(origin);
-                }
-                return false;
-            });
-            if (isAllowed) {
-                return callback(null, true);
-            }
+        catch (err) {
+            // fallthrough to block
         }
-        console.log('CORS blocked origin:', origin);
+        console.warn('CORS blocked origin:', origin);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -143,6 +134,28 @@ app.get('/health', async (_req, res) => {
             database: 'disconnected',
             error: 'Database connection failed',
         });
+    }
+});
+// Debug endpoint to inspect incoming request auth headers/cookies (safe: does not return tokens)
+app.get('/debug/request-info', (req, res) => {
+    try {
+        const origin = req.headers.origin || null;
+        const hasAuthHeader = !!req.headers.authorization;
+        const hasCookie = !!(req.cookies && req.cookies.access_token);
+        const authHeaderSample = typeof req.headers.authorization === 'string'
+            ? req.headers.authorization.slice(0, 40) + (req.headers.authorization.length > 40 ? '...' : '')
+            : null;
+        const cookieLength = req.cookies && req.cookies.access_token ? req.cookies.access_token.length : 0;
+        res.json({
+            origin,
+            hasAuthHeader,
+            hasCookie,
+            authHeaderSample,
+            cookieLength,
+        });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Failed to inspect request' });
     }
 });
 // API routes

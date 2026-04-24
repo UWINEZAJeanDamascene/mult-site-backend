@@ -44,10 +44,24 @@ const models_1 = require("../models");
 const types_1 = require("../types");
 async function authenticateToken(req, res, next) {
     try {
-        const authHeader = req.headers['authorization'];
-        // Support token from Authorization header or httpOnly cookie named access_token
-        const tokenFromHeader = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-        const token = tokenFromHeader || (req.cookies && req.cookies.access_token);
+        // Get token from Authorization header OR cookie (supports both localStorage and httpOnly cookie)
+        // Header takes precedence for explicit token-based auth
+        const authHeader = req.headers.authorization;
+        const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+        const tokenFromCookie = req.cookies?.access_token || req.cookies?.token;
+        const token = tokenFromHeader || tokenFromCookie;
+        // Debug logging to help diagnose cross-origin cookie / header issues in deployments
+        try {
+            console.debug('[Auth] Incoming request origin:', req.headers.origin || 'none');
+            console.debug('[Auth] Authorization header present:', !!authHeader);
+            console.debug('[Auth] Cookie present:', !!(req.cookies?.access_token || req.cookies?.token));
+            if (authHeader && typeof authHeader === 'string') {
+                console.debug('[Auth] Authorization header (masked):', authHeader.slice(0, 30) + (authHeader.length > 30 ? '...' : ''));
+            }
+        }
+        catch (err) {
+            console.debug('[Auth] Failed to log auth debug info', err);
+        }
         if (!token) {
             res.status(401).json({ error: 'Access token required' });
             return;
@@ -78,6 +92,7 @@ async function authenticateToken(req, res, next) {
         next();
     }
     catch (error) {
+        console.error('[Auth] Token verification failed:', error);
         res.status(403).json({ error: 'Invalid or expired token' });
         return;
     }

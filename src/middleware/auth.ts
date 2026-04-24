@@ -22,14 +22,19 @@ export async function authenticateToken(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Get token from Authorization header only (works across devices via localStorage)
+    // Get token from Authorization header OR cookie (supports both localStorage and httpOnly cookie)
+    // Header takes precedence for explicit token-based auth
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const tokenFromCookie = (req as any).cookies?.access_token || (req as any).cookies?.token;
+    
+    const token = tokenFromHeader || tokenFromCookie;
 
     // Debug logging to help diagnose cross-origin cookie / header issues in deployments
     try {
       console.debug('[Auth] Incoming request origin:', req.headers.origin || 'none');
       console.debug('[Auth] Authorization header present:', !!authHeader);
+      console.debug('[Auth] Cookie present:', !!((req as any).cookies?.access_token || (req as any).cookies?.token));
       if (authHeader && typeof authHeader === 'string') {
         console.debug('[Auth] Authorization header (masked):', authHeader.slice(0, 30) + (authHeader.length > 30 ? '...' : ''))
       }

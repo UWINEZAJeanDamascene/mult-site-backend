@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../utils/auth");
-const config_1 = require("../config");
 const auth_2 = require("../middleware/auth");
 const models_1 = require("../models");
 const Company_1 = require("../models/Company");
@@ -125,16 +124,19 @@ router.post('/login', async (req, res) => {
             .catch(err => console.error('Failed to log login action:', err));
         // Fetch or create company data
         const company = await getOrCreateDefaultCompany(user.company_id);
-        // Set httpOnly cookie for session persistence (backend stores the token)
-        // For cross-site frontend/backends (e.g. Vercel frontend, Render backend)
-        // cookies must be set with SameSite=None and Secure in production.
-        res.cookie('access_token', token, {
-            httpOnly: true,
-            secure: config_1.config.NODE_ENV === 'production',
-            sameSite: config_1.config.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
+        // Return token in JSON for localStorage-based auth
+        // ALSO set cookie for cross-session/cross-device persistence via httpOnly cookie
+        const cookieOptions = [
+            `access_token=${token}`,
+            'Path=/',
+            'HttpOnly',
+            process.env.NODE_ENV === 'production' ? 'Secure' : '',
+            'SameSite=Lax',
+            'Max-Age=86400', // 24 hours
+        ].filter(Boolean).join('; ');
+        res.setHeader('Set-Cookie', cookieOptions);
         res.json({
+            token,
             user: {
                 id: user._id.toString(),
                 email: user.email,
@@ -170,15 +172,19 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ error: 'Failed to login' });
     }
 });
-// Logout - clear cookie
+// Logout - frontend clears localStorage, backend clears cookie and confirms
 router.post('/logout', auth_2.authenticateToken, async (req, res) => {
     try {
-        // Ensure we clear the cookie using the same attributes so the browser removes it
-        res.clearCookie('access_token', {
-            httpOnly: true,
-            secure: config_1.config.NODE_ENV === 'production',
-            sameSite: config_1.config.NODE_ENV === 'production' ? 'none' : 'lax',
-        });
+        // Clear the access_token cookie
+        const cookieOptions = [
+            'access_token=deleted',
+            'Path=/',
+            'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+            'HttpOnly',
+            process.env.NODE_ENV === 'production' ? 'Secure' : '',
+            'SameSite=Lax',
+        ].filter(Boolean).join('; ');
+        res.setHeader('Set-Cookie', cookieOptions);
         res.json({ message: 'Logged out' });
     }
     catch (error) {

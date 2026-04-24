@@ -137,47 +137,70 @@ router.post('/login', async (req, res): Promise<void> => {
     // Fetch or create company data
     const company = await getOrCreateDefaultCompany(user.company_id);
 
-     // Return token in JSON for localStorage-based auth (works across devices)
-     res.json({
-       token,
-       user: {
-         id: user._id.toString(),
-         email: user.email,
-         name: user.name,
-         role: user.role,
-         company_id: user.company_id,
-         assignedSites: assignedSitesData,
-         // Profile fields
-         profilePicture: user.profilePicture,
-         phone: user.phone,
-         department: user.department,
-         jobTitle: user.jobTitle,
-         bio: user.bio,
-         location: user.location,
-         // Company data
-         company: company ? {
-           id: company._id.toString(),
-           name: company.name,
-           logo: company.logo,
-           address: company.address,
-           phone: company.phone,
-           email: company.email,
-           website: company.website,
-           taxId: company.taxId,
-           industry: company.industry,
-           description: company.description,
-         } : null,
-       },
-     });
+    // Return token in JSON for localStorage-based auth
+    // ALSO set cookie for cross-session/cross-device persistence via httpOnly cookie
+    const cookieOptions = [
+      `access_token=${token}`,
+      'Path=/',
+      'HttpOnly',
+      process.env.NODE_ENV === 'production' ? 'Secure' : '',
+      'SameSite=Lax',
+      'Max-Age=86400', // 24 hours
+    ].filter(Boolean).join('; ');
+
+    res.setHeader('Set-Cookie', cookieOptions);
+
+    res.json({
+      token,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        company_id: user.company_id,
+        assignedSites: assignedSitesData,
+        // Profile fields
+        profilePicture: user.profilePicture,
+        phone: user.phone,
+        department: user.department,
+        jobTitle: user.jobTitle,
+        bio: user.bio,
+        location: user.location,
+        // Company data
+        company: company ? {
+          id: company._id.toString(),
+          name: company.name,
+          logo: company.logo,
+          address: company.address,
+          phone: company.phone,
+          email: company.email,
+          website: company.website,
+          taxId: company.taxId,
+          industry: company.industry,
+          description: company.description,
+        } : null,
+      },
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
 });
 
-// Logout - frontend clears localStorage, backend just confirms
+// Logout - frontend clears localStorage, backend clears cookie and confirms
 router.post('/logout', authenticateToken, async (req, res): Promise<void> => {
     try {
+      // Clear the access_token cookie
+      const cookieOptions = [
+        'access_token=deleted',
+        'Path=/',
+        'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'HttpOnly',
+        process.env.NODE_ENV === 'production' ? 'Secure' : '',
+        'SameSite=Lax',
+      ].filter(Boolean).join('; ');
+
+      res.setHeader('Set-Cookie', cookieOptions);
       res.json({ message: 'Logged out' });
     } catch (error) {
       console.error('Logout error:', error);
