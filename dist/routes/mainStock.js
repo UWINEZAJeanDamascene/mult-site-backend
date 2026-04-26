@@ -143,6 +143,7 @@ router.get('/movements', auth_1.authenticateToken, auth_1.requireMainStockManage
         const days = parseInt(req.query.days) || 30;
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
+        // Get aggregated movements with material names
         const movements = await MainStockRecord_1.default.aggregate([
             { $match: { company_id, date: { $gte: startDate } } },
             {
@@ -150,10 +151,11 @@ router.get('/movements', auth_1.authenticateToken, auth_1.requireMainStockManage
                     _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
                     received: { $sum: '$quantityReceived' },
                     used: { $sum: '$quantityUsed' },
+                    materials: { $push: { name: '$materialName', qty: '$quantityReceived' } },
                 },
             },
             { $sort: { _id: 1 } },
-            { $project: { date: '$_id', received: 1, used: 1, _id: 0 } },
+            { $project: { date: '$_id', received: 1, used: 1, materials: 1, _id: 0 } },
         ]);
         // Fill in missing dates with zeros
         const result = [];
@@ -166,6 +168,7 @@ router.get('/movements', auth_1.authenticateToken, auth_1.requireMainStockManage
                 date: dateStr,
                 received: existing?.received || 0,
                 used: existing?.used || 0,
+                materials: existing?.materials || [],
             });
         }
         res.json(result);

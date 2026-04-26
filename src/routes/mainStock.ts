@@ -114,6 +114,7 @@ router.get('/movements', authenticateToken, requireMainStockManager, async (req,
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
+    // Get aggregated movements with material names
     const movements = await MainStockRecord.aggregate([
       { $match: { company_id, date: { $gte: startDate } } },
       {
@@ -121,10 +122,11 @@ router.get('/movements', authenticateToken, requireMainStockManager, async (req,
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
           received: { $sum: '$quantityReceived' },
           used: { $sum: '$quantityUsed' },
+          materials: { $push: { name: '$materialName', qty: '$quantityReceived' } },
         },
       },
       { $sort: { _id: 1 } },
-      { $project: { date: '$_id', received: 1, used: 1, _id: 0 } },
+      { $project: { date: '$_id', received: 1, used: 1, materials: 1, _id: 0 } },
     ]);
 
     // Fill in missing dates with zeros
@@ -138,6 +140,7 @@ router.get('/movements', authenticateToken, requireMainStockManager, async (req,
         date: dateStr,
         received: existing?.received || 0,
         used: existing?.used || 0,
+        materials: existing?.materials || [],
       });
     }
 

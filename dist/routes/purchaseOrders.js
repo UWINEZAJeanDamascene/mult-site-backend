@@ -27,9 +27,8 @@ async function generatePONumber(company_id) {
     return `${prefix}${sequence.toString().padStart(4, '0')}`;
 }
 // Calculate totals from items
-function calculateTotals(items) {
+function calculateTotals(items, taxRate = 0) {
     const subTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const taxRate = 0; // Default tax rate, can be customized
     const taxAmount = subTotal * (taxRate / 100);
     const totalAmount = subTotal + taxAmount;
     return { subTotal, taxRate, taxAmount, totalAmount };
@@ -185,7 +184,7 @@ router.post('/', auth_1.authenticateToken, auth_1.requireMainStockManager, async
             unit: item.unit || 'pcs',
             notes: item.notes || '',
         }));
-        const totals = calculateTotals(processedItems);
+        const totals = calculateTotals(processedItems, taxRate);
         // Generate PO number
         const poNumber = await generatePONumber(company_id);
         const po = await models_1.PurchaseOrder.create({
@@ -257,7 +256,14 @@ router.put('/:id', auth_1.authenticateToken, auth_1.requireMainStockManager, asy
                 unit: item.unit || 'pcs',
                 notes: item.notes || '',
             }));
-            const totals = calculateTotals(po.items);
+            const totals = calculateTotals(po.items, taxRate !== undefined ? taxRate : po.taxRate);
+            po.subTotal = totals.subTotal;
+            po.taxAmount = totals.taxAmount;
+            po.totalAmount = totals.totalAmount;
+        }
+        else if (taxRate !== undefined) {
+            // Only taxRate changed, recalculate with new rate
+            const totals = calculateTotals(po.items, taxRate);
             po.subTotal = totals.subTotal;
             po.taxAmount = totals.taxAmount;
             po.totalAmount = totals.totalAmount;

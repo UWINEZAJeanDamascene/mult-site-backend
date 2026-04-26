@@ -54,6 +54,9 @@ const actionLogs_1 = __importDefault(require("./routes/actionLogs"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 const companies_1 = __importDefault(require("./routes/companies"));
 const purchaseOrders_1 = __importDefault(require("./routes/purchaseOrders"));
+const suppliers_1 = __importDefault(require("./routes/suppliers"));
+const deliveryNotes_1 = __importDefault(require("./routes/deliveryNotes"));
+const purchaseReturns_1 = __importDefault(require("./routes/purchaseReturns"));
 const app = (0, express_1.default)();
 // Middleware
 app.use((0, helmet_1.default)({
@@ -169,6 +172,9 @@ app.use('/action-logs', actionLogs_1.default);
 app.use('/notifications', notifications_1.default);
 app.use('/companies', companies_1.default);
 app.use('/purchase-orders', purchaseOrders_1.default);
+app.use('/suppliers', suppliers_1.default);
+app.use('/delivery-notes', deliveryNotes_1.default);
+app.use('/purchase-returns', purchaseReturns_1.default);
 console.log('Routes registered successfully');
 // Error handling middleware
 app.use((err, _req, res, _next) => {

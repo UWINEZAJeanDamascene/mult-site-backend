@@ -31,9 +31,8 @@ async function generatePONumber(company_id: string): Promise<string> {
 }
 
 // Calculate totals from items
-function calculateTotals(items: any[]) {
+function calculateTotals(items: any[], taxRate: number = 0) {
   const subTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  const taxRate = 0; // Default tax rate, can be customized
   const taxAmount = subTotal * (taxRate / 100);
   const totalAmount = subTotal + taxAmount;
 
@@ -210,7 +209,7 @@ router.post('/', authenticateToken, requireMainStockManager, async (req, res): P
       notes: item.notes || '',
     }));
 
-    const totals = calculateTotals(processedItems);
+    const totals = calculateTotals(processedItems, taxRate);
 
     // Generate PO number
     const poNumber = await generatePONumber(company_id);
@@ -296,7 +295,13 @@ router.put('/:id', authenticateToken, requireMainStockManager, async (req, res):
         notes: item.notes || '',
       }));
 
-      const totals = calculateTotals(po.items);
+      const totals = calculateTotals(po.items, taxRate !== undefined ? taxRate : po.taxRate);
+      po.subTotal = totals.subTotal;
+      po.taxAmount = totals.taxAmount;
+      po.totalAmount = totals.totalAmount;
+    } else if (taxRate !== undefined) {
+      // Only taxRate changed, recalculate with new rate
+      const totals = calculateTotals(po.items, taxRate);
       po.subTotal = totals.subTotal;
       po.taxAmount = totals.taxAmount;
       po.totalAmount = totals.totalAmount;

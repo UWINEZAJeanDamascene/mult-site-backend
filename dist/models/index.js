@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PurchaseOrder = exports.ResourceType = exports.ActionType = exports.ActionLog = exports.createNotification = exports.NotificationPriority = exports.NotificationType = exports.Notification = exports.MovementType = exports.StockMovement = exports.RecordStatus = exports.RecordSource = exports.MainStockRecord = exports.SiteRecord = exports.Material = exports.Site = exports.UserRole = exports.User = void 0;
+exports.PurchaseReturn = exports.DeliveryNote = exports.Supplier = exports.PurchaseOrder = exports.ResourceType = exports.ActionType = exports.ActionLog = exports.createNotification = exports.NotificationPriority = exports.NotificationType = exports.Notification = exports.MovementType = exports.StockMovement = exports.RecordStatus = exports.RecordSource = exports.MainStockRecord = exports.SiteRecord = exports.Material = exports.Site = exports.UserRole = exports.User = void 0;
 var User_1 = require("./User");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return User_1.User; } });
 Object.defineProperty(exports, "UserRole", { enumerable: true, get: function () { return User_1.UserRole; } });
@@ -28,4 +28,10 @@ Object.defineProperty(exports, "ActionType", { enumerable: true, get: function (
 Object.defineProperty(exports, "ResourceType", { enumerable: true, get: function () { return ActionLog_1.ResourceType; } });
 var PurchaseOrder_1 = require("./PurchaseOrder");
 Object.defineProperty(exports, "PurchaseOrder", { enumerable: true, get: function () { return PurchaseOrder_1.PurchaseOrder; } });
+var Supplier_1 = require("./Supplier");
+Object.defineProperty(exports, "Supplier", { enumerable: true, get: function () { return Supplier_1.Supplier; } });
+var DeliveryNote_1 = require("./DeliveryNote");
+Object.defineProperty(exports, "DeliveryNote", { enumerable: true, get: function () { return DeliveryNote_1.DeliveryNote; } });
+var PurchaseReturn_1 = require("./PurchaseReturn");
+Object.defineProperty(exports, "PurchaseReturn", { enumerable: true, get: function () { return PurchaseReturn_1.PurchaseReturn; } });
 //# sourceMappingURL=index.js.map

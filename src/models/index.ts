@@ -37,3 +37,17 @@ export {
   IPurchaseOrder,
   IPOItem,
 } from './PurchaseOrder';
+export {
+  Supplier,
+  ISupplierDocument,
+} from './Supplier';
+export {
+  DeliveryNote,
+  IDeliveryNoteDocument,
+  IDeliveryNoteItem,
+} from './DeliveryNote';
+export {
+  PurchaseReturn,
+  IPurchaseReturnDocument,
+  IPurchaseReturnItem,
+} from './PurchaseReturn';

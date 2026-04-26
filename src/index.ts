@@ -18,6 +18,9 @@ import actionLogsRoutes from './routes/actionLogs';
 import notificationsRoutes from './routes/notifications';
 import companiesRoutes from './routes/companies';
 import purchaseOrderRoutes from './routes/purchaseOrders';
+import supplierRoutes from './routes/suppliers';
+import deliveryNoteRoutes from './routes/deliveryNotes';
+import purchaseReturnRoutes from './routes/purchaseReturns';
 
 const app = express();
 
@@ -140,6 +143,9 @@ app.use('/action-logs', actionLogsRoutes);
 app.use('/notifications', notificationsRoutes);
 app.use('/companies', companiesRoutes);
 app.use('/purchase-orders', purchaseOrderRoutes);
+app.use('/suppliers', supplierRoutes);
+app.use('/delivery-notes', deliveryNoteRoutes);
+app.use('/purchase-returns', purchaseReturnRoutes);
 console.log('Routes registered successfully');
 
 // Error handling middleware

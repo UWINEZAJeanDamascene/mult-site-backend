@@ -7,4 +7,7 @@ export { StockMovement, IStockMovement, IStockMovementDocument, IStockMovementMo
 export { Notification, INotification, NotificationType, NotificationPriority, createNotification, } from './Notification';
 export { ActionLog, IActionLog, IActionLogDocument, IActionLogModel, ActionType, ResourceType, } from './ActionLog';
 export { PurchaseOrder, IPurchaseOrder, IPOItem, } from './PurchaseOrder';
+export { Supplier, ISupplierDocument, } from './Supplier';
+export { DeliveryNote, IDeliveryNoteDocument, IDeliveryNoteItem, } from './DeliveryNote';
+export { PurchaseReturn, IPurchaseReturnDocument, IPurchaseReturnItem, } from './PurchaseReturn';
 //# sourceMappingURL=index.d.ts.map
